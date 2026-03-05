@@ -1,0 +1,21 @@
+[project]
+name = "carta-mcp"
+version = "0.1.0"
+description = "MCP server for the Carta equity management platform"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dedalus-mcp",
+    "pydantic",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatchling.build]
+targets.wheel.packages = ["src"]
