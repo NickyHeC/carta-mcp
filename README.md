@@ -15,11 +15,12 @@ Carta handles sensitive financial data — cap tables, valuations, equity holdin
 ```
 carta-mcp/
 ├── src/
-│   ├── main.py      # Server entry point and DAuth connection config
-│   ├── tools.py     # 32 Carta API tools + rate limiter
-│   └── client.py    # Test client for local debugging
-├── pyproject.toml   # Dependencies and build config
-├── .env             # Carta credentials (not committed)
+│   ├── main.py          # Server entry point and DAuth connection config
+│   ├── tools.py         # 32 Carta API tools + rate limiter
+│   ├── oauth_helper.py  # OAuth 2.0 Authorization Code Flow helper
+│   └── client.py        # Test client for local debugging
+├── pyproject.toml       # Dependencies and build config
+├── .env                 # Carta credentials (not committed)
 └── README.md
 ```
 
@@ -45,28 +46,43 @@ Create a `.env` file in the project root:
 ```
 CARTA_CLIENT_ID=<your-client-id>
 CARTA_CLIENT_SECRET=<your-client-secret>
-CARTA_ACCESS_TOKEN=<your-bearer-token>
+CARTA_ACCESS_TOKEN=
+CARTA_REFRESH_TOKEN=
+CARTA_REDIRECT_URI=http://localhost:9090/callback
+CARTA_SCOPES=profile openid email read_investor_firms read_issuer_info ...
 
 DEDALUS_API_KEY=<your-dedalus-api-key>
 DEDALUS_AS_URL=https://as.dedaluslabs.ai
 ```
 
+`CARTA_ACCESS_TOKEN` and `CARTA_REFRESH_TOKEN` are populated automatically by the OAuth helper in the next step.
+
 ### 3. Obtain a Bearer token
 
-The Carta API uses OAuth 2.0. You need a Bearer token to authenticate requests.
-
-**Client Credentials Flow** (your own account data):
+Carta uses [OAuth 2.0 Authorization Code Flow](https://docs.carta.com/carta/docs/authorization-code-flow). A helper script automates the full flow:
 
 ```bash
-curl -X POST https://login.app.carta.com/o/access_token/ \
-  -H "Authorization: Basic $(echo -n '<client_id>:<client_secret>' | base64)" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=CLIENT_CREDENTIALS&scope=read_issuer_info read_investor_firms read_portfolio_info"
+python -m src.oauth_helper
 ```
 
-**Authorization Code Flow** (third-party data): redirect users to `https://login.app.carta.com/o/authorize/` and exchange the code at `/o/access_token/`. See the [full guide](https://docs.carta.com/carta/docs/authorization-code-flow).
+This will:
 
-Access tokens expire after **1 hour**. Store the resulting `access_token` as `CARTA_ACCESS_TOKEN` in your `.env` or DAuth session.
+1. Open your browser to Carta's authorization page
+2. Start a local callback server on `http://localhost:9090/callback`
+3. Exchange the authorization code for access + refresh tokens
+4. Save both tokens to `.env`
+
+Make sure `http://localhost:9090/callback` is registered as a **Redirect URI** in your [Carta Developer Portal](https://developers.app.carta.com) app settings.
+
+Access tokens expire after **1 hour**. Refresh before they expire:
+
+```bash
+python -m src.oauth_helper refresh
+```
+
+Refresh tokens expire after **14 days**. After that, re-run the full authorization flow.
+
+> **Manual flow**: If you prefer to obtain tokens manually, see the [Authorization Code Flow](https://docs.carta.com/carta/docs/authorization-code-flow) or [Client Credentials Flow](https://docs.carta.com/carta/docs/client-credentials-flow) docs and set `CARTA_ACCESS_TOKEN` in `.env` directly.
 
 ### 4. Start the server
 

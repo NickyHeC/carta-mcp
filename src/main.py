@@ -10,10 +10,9 @@ from src.tools import tools
 load_dotenv()
 
 # --- DAuth Connection ---
-# Carta uses OAuth 2.0 Bearer tokens. Obtain an access token via the client
-# credentials flow (POST https://login.app.carta.com/o/access_token/) using
-# your CARTA_CLIENT_ID and CARTA_CLIENT_SECRET, then store the resulting token
-# as CARTA_ACCESS_TOKEN in your DAuth session.
+# Carta uses OAuth 2.0 Authorization Code Flow. Run `python -m src.oauth_helper`
+# to obtain a Bearer token, which is stored as CARTA_ACCESS_TOKEN. DAuth keeps
+# the token inside a sealed enclave — this server never sees the raw secret.
 
 carta_connection = Connection(
     name="carta",
